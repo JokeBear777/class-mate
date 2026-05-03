@@ -1,4 +1,4 @@
-package class_mate.class_mate;
+package com.classmate;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,5 +9,4 @@ class ClassMateApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }

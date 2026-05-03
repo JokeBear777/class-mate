@@ -40,3 +40,7 @@ out/
 .env
 .env.*
 !.env.example
+
+## Agent
+AGENTS.md
+/docs
