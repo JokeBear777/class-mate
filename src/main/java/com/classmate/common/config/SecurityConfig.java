@@ -15,6 +15,11 @@ public class SecurityConfig {
 			"/v3/api-docs/**"
 	};
 
+	private static final String[] LECTURE_API_PATHS = {
+			"/api/v1/lectures/**",
+			"/api/v1/sessions/**"
+	};
+
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		return http
@@ -23,6 +28,7 @@ public class SecurityConfig {
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(SWAGGER_PATHS).permitAll()
+						.requestMatchers(LECTURE_API_PATHS).permitAll()
 						.anyRequest().authenticated())
 				.build();
 	}
