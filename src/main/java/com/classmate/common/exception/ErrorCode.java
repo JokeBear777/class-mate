@@ -11,6 +11,12 @@ public enum ErrorCode {
 	LECTURE_SESSION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "An active lecture session already exists."),
 	SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Lecture session not found."),
 	SESSION_ALREADY_ENDED(HttpStatus.CONFLICT, "Lecture session has already ended."),
+	EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "Email is already in use."),
+	INVALID_LOGIN_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Email or password is invalid."),
+	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found."),
+	UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Authentication is required."),
+	INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "Invalid token."),
+	EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "Expired token."),
 	VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Request validation failed."),
 	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.");
 

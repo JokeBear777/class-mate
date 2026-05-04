@@ -1,7 +1,9 @@
 package com.classmate.lecture.application;
 
+import com.classmate.auth.application.UserQueryService;
 import com.classmate.common.exception.BusinessException;
 import com.classmate.common.exception.ErrorCode;
+import com.classmate.common.security.CurrentUserProvider;
 import com.classmate.lecture.domain.Lecture;
 import com.classmate.lecture.domain.LectureEnrollment;
 import com.classmate.lecture.domain.LectureRole;
@@ -26,25 +28,30 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class LectureService {
 
-	private static final Long CURRENT_USER_ID = 1L;
-	private static final String CURRENT_PROFESSOR_NAME = "Professor Kim";
 	private static final String JOIN_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	private static final int JOIN_CODE_LENGTH = 6;
 
 	private final LectureRepository lectureRepository;
 	private final LectureEnrollmentRepository lectureEnrollmentRepository;
+	private final CurrentUserProvider currentUserProvider;
+	private final UserQueryService userQueryService;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public LectureService(
 			LectureRepository lectureRepository,
-			LectureEnrollmentRepository lectureEnrollmentRepository
+			LectureEnrollmentRepository lectureEnrollmentRepository,
+			CurrentUserProvider currentUserProvider,
+			UserQueryService userQueryService
 	) {
 		this.lectureRepository = lectureRepository;
 		this.lectureEnrollmentRepository = lectureEnrollmentRepository;
+		this.currentUserProvider = currentUserProvider;
+		this.userQueryService = userQueryService;
 	}
 
 	@Transactional
 	public LectureResponse createLecture(CreateLectureRequest request) {
+		validateCanCreateLecture();
 		Long currentUserId = currentUserId();
 		String joinCode = generateUniqueJoinCode();
 		Lecture lecture = lectureRepository.save(
@@ -165,10 +172,17 @@ public class LectureService {
 	}
 
 	private Long currentUserId() {
-		return CURRENT_USER_ID;
+		return currentUserProvider.getCurrentUserId();
+	}
+
+	private void validateCanCreateLecture() {
+		String currentUserRole = currentUserProvider.getCurrentUserRole();
+		if (!"PROFESSOR".equals(currentUserRole) && !"ADMIN".equals(currentUserRole)) {
+			throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
+		}
 	}
 
 	private String professorName(Lecture lecture) {
-		return CURRENT_PROFESSOR_NAME;
+		return userQueryService.getUserName(lecture.getProfessorId());
 	}
 }

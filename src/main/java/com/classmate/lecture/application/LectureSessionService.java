@@ -2,6 +2,7 @@ package com.classmate.lecture.application;
 
 import com.classmate.common.exception.BusinessException;
 import com.classmate.common.exception.ErrorCode;
+import com.classmate.common.security.CurrentUserProvider;
 import com.classmate.lecture.domain.Lecture;
 import com.classmate.lecture.domain.LectureEnrollment;
 import com.classmate.lecture.domain.LectureRole;
@@ -21,21 +22,23 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class LectureSessionService {
 
-	private static final Long CURRENT_USER_ID = 1L;
 	private static final String DEFAULT_SESSION_TITLE = "Live lecture session";
 
 	private final LectureRepository lectureRepository;
 	private final LectureEnrollmentRepository lectureEnrollmentRepository;
 	private final LectureSessionRepository lectureSessionRepository;
+	private final CurrentUserProvider currentUserProvider;
 
 	public LectureSessionService(
 			LectureRepository lectureRepository,
 			LectureEnrollmentRepository lectureEnrollmentRepository,
-			LectureSessionRepository lectureSessionRepository
+			LectureSessionRepository lectureSessionRepository,
+			CurrentUserProvider currentUserProvider
 	) {
 		this.lectureRepository = lectureRepository;
 		this.lectureEnrollmentRepository = lectureEnrollmentRepository;
 		this.lectureSessionRepository = lectureSessionRepository;
+		this.currentUserProvider = currentUserProvider;
 	}
 
 	@Transactional
@@ -94,6 +97,6 @@ public class LectureSessionService {
 	}
 
 	private Long currentUserId() {
-		return CURRENT_USER_ID;
+		return currentUserProvider.getCurrentUserId();
 	}
 }
