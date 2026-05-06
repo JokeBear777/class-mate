@@ -29,6 +29,11 @@ public class SecurityConfig {
 			"/api/v1/auth/login"
 	};
 
+	private static final String[] WEBSOCKET_PATHS = {
+			"/ws",
+			"/ws/**"
+	};
+
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final ObjectMapper objectMapper;
 
@@ -53,6 +58,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(SWAGGER_PATHS).permitAll()
 						.requestMatchers(AUTH_PUBLIC_PATHS).permitAll()
+						.requestMatchers(WEBSOCKET_PATHS).permitAll()
 						.requestMatchers("/api/v1/**").authenticated()
 						.anyRequest().authenticated())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
