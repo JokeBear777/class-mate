@@ -28,6 +28,7 @@ public class RedisStreamConfig {
 	@EventListener(ContextRefreshedEvent.class)
 	public void createConsumerGroups() {
 		createGroup(RedisStreamNames.LECTURE_EVENTS_STREAM, RedisStreamNames.REALTIME_CONSUMER_GROUP);
+		createGroup(RedisStreamNames.LECTURE_EVENTS_STREAM, RedisStreamNames.MONITORING_CONSUMER_GROUP);
 	}
 
 	private void createGroup(String stream, String group) {

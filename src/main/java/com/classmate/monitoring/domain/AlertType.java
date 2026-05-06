@@ -1,0 +1,9 @@
+package com.classmate.monitoring.domain;
+
+public enum AlertType {
+	QUESTION_SPIKE,
+	CONFUSION_SPIKE,
+	FAST_PACE_SPIKE,
+	UNANSWERED_QUESTION_ACCUMULATION,
+	HIGH_CONFUSION_SCORE
+}
