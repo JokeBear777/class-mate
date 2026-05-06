@@ -1,6 +1,6 @@
 package com.classmate.realtime.dto;
 
-import com.classmate.feedback.domain.FeedbackEvent;
+import com.classmate.event.dto.FeedbackSubmittedEvent;
 import java.time.LocalDateTime;
 
 public record RealtimeFeedbackMessage(
@@ -12,14 +12,14 @@ public record RealtimeFeedbackMessage(
 		LocalDateTime createdAt
 ) {
 
-	public static RealtimeFeedbackMessage from(FeedbackEvent feedbackEvent) {
+	public static RealtimeFeedbackMessage from(FeedbackSubmittedEvent event) {
 		return new RealtimeFeedbackMessage(
 				RealtimeEventType.FEEDBACK_SUBMITTED,
-				feedbackEvent.getSessionId(),
-				feedbackEvent.getLectureId(),
-				feedbackEvent.getId(),
-				feedbackEvent.getFeedbackType().name(),
-				feedbackEvent.getCreatedAt()
+				event.sessionId(),
+				event.lectureId(),
+				event.feedbackId(),
+				event.feedbackType(),
+				event.createdAt()
 		);
 	}
 }

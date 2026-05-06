@@ -3,6 +3,7 @@ package com.classmate.question.application;
 import com.classmate.common.exception.BusinessException;
 import com.classmate.common.exception.ErrorCode;
 import com.classmate.common.security.CurrentUserProvider;
+import com.classmate.event.publisher.RedisStreamEventPublisher;
 import com.classmate.lecture.application.LectureAccessChecker;
 import com.classmate.lecture.domain.LectureSession;
 import com.classmate.question.domain.Question;
@@ -10,8 +11,6 @@ import com.classmate.question.dto.request.AnswerQuestionRequest;
 import com.classmate.question.dto.request.CreateQuestionRequest;
 import com.classmate.question.dto.response.QuestionResponse;
 import com.classmate.question.infra.QuestionRepository;
-import com.classmate.realtime.application.RealtimeMessageService;
-import com.classmate.realtime.dto.RealtimeQuestionMessage;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,18 +22,18 @@ public class QuestionService {
 	private final QuestionRepository questionRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final LectureAccessChecker lectureAccessChecker;
-	private final RealtimeMessageService realtimeMessageService;
+	private final RedisStreamEventPublisher redisStreamEventPublisher;
 
 	public QuestionService(
 			QuestionRepository questionRepository,
 			CurrentUserProvider currentUserProvider,
 			LectureAccessChecker lectureAccessChecker,
-			RealtimeMessageService realtimeMessageService
+			RedisStreamEventPublisher redisStreamEventPublisher
 	) {
 		this.questionRepository = questionRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.lectureAccessChecker = lectureAccessChecker;
-		this.realtimeMessageService = realtimeMessageService;
+		this.redisStreamEventPublisher = redisStreamEventPublisher;
 	}
 
 	@Transactional
@@ -51,8 +50,8 @@ public class QuestionService {
 				anonymousKey(currentUserId),
 				request.content().trim()
 		));
-		realtimeMessageService.sendQuestionCreated(session.getId(), RealtimeQuestionMessage.from(question));
-		// TODO: replace direct WebSocket send with Redis Stream event publishing after event pipeline is implemented.
+
+		redisStreamEventPublisher.publishQuestionCreated(question);
 
 		return QuestionResponse.from(question);
 	}

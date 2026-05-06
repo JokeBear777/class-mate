@@ -1,6 +1,6 @@
 package com.classmate.realtime.dto;
 
-import com.classmate.question.domain.Question;
+import com.classmate.event.dto.QuestionCreatedEvent;
 import java.time.LocalDateTime;
 
 public record RealtimeQuestionMessage(
@@ -16,18 +16,18 @@ public record RealtimeQuestionMessage(
 		LocalDateTime createdAt
 ) {
 
-	public static RealtimeQuestionMessage from(Question question) {
+	public static RealtimeQuestionMessage from(QuestionCreatedEvent event) {
 		return new RealtimeQuestionMessage(
 				RealtimeEventType.QUESTION_CREATED,
-				question.getSessionId(),
-				question.getLectureId(),
-				question.getId(),
-				question.getAnonymousKey(),
-				question.getContent(),
-				question.getStatus().name(),
-				question.isPinned(),
-				question.isHidden(),
-				question.getCreatedAt()
+				event.sessionId(),
+				event.lectureId(),
+				event.questionId(),
+				event.anonymousKey(),
+				event.content(),
+				event.status(),
+				event.pinned(),
+				event.hidden(),
+				event.createdAt()
 		);
 	}
 }
