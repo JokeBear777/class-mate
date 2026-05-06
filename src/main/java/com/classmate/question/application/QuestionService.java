@@ -10,6 +10,8 @@ import com.classmate.question.dto.request.AnswerQuestionRequest;
 import com.classmate.question.dto.request.CreateQuestionRequest;
 import com.classmate.question.dto.response.QuestionResponse;
 import com.classmate.question.infra.QuestionRepository;
+import com.classmate.realtime.application.RealtimeMessageService;
+import com.classmate.realtime.dto.RealtimeQuestionMessage;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,15 +23,18 @@ public class QuestionService {
 	private final QuestionRepository questionRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final LectureAccessChecker lectureAccessChecker;
+	private final RealtimeMessageService realtimeMessageService;
 
 	public QuestionService(
 			QuestionRepository questionRepository,
 			CurrentUserProvider currentUserProvider,
-			LectureAccessChecker lectureAccessChecker
+			LectureAccessChecker lectureAccessChecker,
+			RealtimeMessageService realtimeMessageService
 	) {
 		this.questionRepository = questionRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.lectureAccessChecker = lectureAccessChecker;
+		this.realtimeMessageService = realtimeMessageService;
 	}
 
 	@Transactional
@@ -46,7 +51,8 @@ public class QuestionService {
 				anonymousKey(currentUserId),
 				request.content().trim()
 		));
-		// TODO: publish QUESTION_CREATED event to Redis Stream after Redis Stream module is implemented.
+		realtimeMessageService.sendQuestionCreated(session.getId(), RealtimeQuestionMessage.from(question));
+		// TODO: replace direct WebSocket send with Redis Stream event publishing after event pipeline is implemented.
 
 		return QuestionResponse.from(question);
 	}

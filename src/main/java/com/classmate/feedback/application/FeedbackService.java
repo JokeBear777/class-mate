@@ -9,6 +9,8 @@ import com.classmate.feedback.dto.response.FeedbackSummaryResponse;
 import com.classmate.feedback.infra.FeedbackEventRepository;
 import com.classmate.lecture.application.LectureAccessChecker;
 import com.classmate.lecture.domain.LectureSession;
+import com.classmate.realtime.application.RealtimeMessageService;
+import com.classmate.realtime.dto.RealtimeFeedbackMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,15 +21,18 @@ public class FeedbackService {
 	private final FeedbackEventRepository feedbackEventRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final LectureAccessChecker lectureAccessChecker;
+	private final RealtimeMessageService realtimeMessageService;
 
 	public FeedbackService(
 			FeedbackEventRepository feedbackEventRepository,
 			CurrentUserProvider currentUserProvider,
-			LectureAccessChecker lectureAccessChecker
+			LectureAccessChecker lectureAccessChecker,
+			RealtimeMessageService realtimeMessageService
 	) {
 		this.feedbackEventRepository = feedbackEventRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.lectureAccessChecker = lectureAccessChecker;
+		this.realtimeMessageService = realtimeMessageService;
 	}
 
 	@Transactional
@@ -43,7 +48,8 @@ public class FeedbackService {
 				currentUserId,
 				request.feedbackType()
 		));
-		// TODO: publish FEEDBACK_SUBMITTED event to Redis Stream after Redis Stream module is implemented.
+		realtimeMessageService.sendFeedbackSubmitted(session.getId(), RealtimeFeedbackMessage.from(feedbackEvent));
+		// TODO: replace direct WebSocket send with Redis Stream event publishing after event pipeline is implemented.
 
 		return FeedbackResponse.from(feedbackEvent);
 	}
