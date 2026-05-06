@@ -5,6 +5,7 @@ import com.classmate.common.exception.ErrorCode;
 import com.classmate.common.security.CurrentUserProvider;
 import com.classmate.lecture.application.LectureAccessChecker;
 import com.classmate.lecture.domain.LectureSession;
+import com.classmate.event.publisher.RedisStreamEventPublisher;
 import com.classmate.question.domain.Question;
 import com.classmate.question.dto.request.AnswerQuestionRequest;
 import com.classmate.question.dto.request.CreateQuestionRequest;
@@ -21,15 +22,18 @@ public class QuestionService {
 	private final QuestionRepository questionRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final LectureAccessChecker lectureAccessChecker;
+	private final RedisStreamEventPublisher redisStreamEventPublisher;
 
 	public QuestionService(
 			QuestionRepository questionRepository,
 			CurrentUserProvider currentUserProvider,
-			LectureAccessChecker lectureAccessChecker
+			LectureAccessChecker lectureAccessChecker,
+			RedisStreamEventPublisher redisStreamEventPublisher
 	) {
 		this.questionRepository = questionRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.lectureAccessChecker = lectureAccessChecker;
+		this.redisStreamEventPublisher = redisStreamEventPublisher;
 	}
 
 	@Transactional
@@ -46,7 +50,7 @@ public class QuestionService {
 				anonymousKey(currentUserId),
 				request.content().trim()
 		));
-		// TODO: publish QUESTION_CREATED event to Redis Stream after Redis Stream module is implemented.
+		redisStreamEventPublisher.publishQuestionCreated(question);
 
 		return QuestionResponse.from(question);
 	}
