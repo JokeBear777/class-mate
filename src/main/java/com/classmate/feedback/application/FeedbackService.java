@@ -47,6 +47,7 @@ public class FeedbackService {
 				currentUserId,
 				request.feedbackType()
 		));
+
 		redisStreamEventPublisher.publishFeedbackSubmitted(feedbackEvent);
 
 		return FeedbackResponse.from(feedbackEvent);

@@ -3,9 +3,9 @@ package com.classmate.question.application;
 import com.classmate.common.exception.BusinessException;
 import com.classmate.common.exception.ErrorCode;
 import com.classmate.common.security.CurrentUserProvider;
+import com.classmate.event.publisher.RedisStreamEventPublisher;
 import com.classmate.lecture.application.LectureAccessChecker;
 import com.classmate.lecture.domain.LectureSession;
-import com.classmate.event.publisher.RedisStreamEventPublisher;
 import com.classmate.question.domain.Question;
 import com.classmate.question.dto.request.AnswerQuestionRequest;
 import com.classmate.question.dto.request.CreateQuestionRequest;
@@ -50,6 +50,7 @@ public class QuestionService {
 				anonymousKey(currentUserId),
 				request.content().trim()
 		));
+
 		redisStreamEventPublisher.publishQuestionCreated(question);
 
 		return QuestionResponse.from(question);
