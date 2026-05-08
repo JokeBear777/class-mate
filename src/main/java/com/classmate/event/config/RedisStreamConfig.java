@@ -46,11 +46,26 @@ public class RedisStreamConfig {
 			});
 			log.info("Redis Stream consumer group created. stream={}, group={}", stream, group);
 		} catch (DataAccessException exception) {
-			if (exception.getMessage() != null && exception.getMessage().contains("BUSYGROUP")) {
-				log.debug("Redis Stream consumer group already exists. stream={}, group={}", stream, group);
+			if (isBusyGroupException(exception)) {
+				log.info("Redis Stream consumer group already exists. stream={}, group={}", stream, group);
 				return;
 			}
+
 			log.warn("Failed to create Redis Stream consumer group. stream={}, group={}", stream, group, exception);
 		}
+	}
+
+	private boolean isBusyGroupException(Throwable exception) {
+		while (exception != null) {
+			String message = exception.getMessage();
+
+			if (message != null && message.contains("BUSYGROUP")) {
+				return true;
+			}
+
+			exception = exception.getCause();
+		}
+
+		return false;
 	}
 }

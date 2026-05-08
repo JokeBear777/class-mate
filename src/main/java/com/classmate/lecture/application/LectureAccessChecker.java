@@ -42,14 +42,22 @@ public class LectureAccessChecker {
 
 	public void validateProfessorOrAssistant(Long lectureId, Long userId) {
 		LectureEnrollment enrollment = getEnrollmentOrThrow(lectureId, userId);
-		if (enrollment.getRole() != LectureRole.PROFESSOR && enrollment.getRole() != LectureRole.ASSISTANT) {
+		if (!isProfessorOrAssistant(enrollment)) {
 			throw new BusinessException(ErrorCode.LECTURE_ACCESS_DENIED);
 		}
+	}
+
+	public boolean isProfessorOrAssistant(Long lectureId, Long userId) {
+		return isProfessorOrAssistant(getEnrollmentOrThrow(lectureId, userId));
 	}
 
 	public void validateActiveSession(LectureSession session) {
 		if (session.getStatus() != LectureSessionStatus.ACTIVE) {
 			throw new BusinessException(ErrorCode.SESSION_NOT_ACTIVE);
 		}
+	}
+
+	private boolean isProfessorOrAssistant(LectureEnrollment enrollment) {
+		return enrollment.getRole() == LectureRole.PROFESSOR || enrollment.getRole() == LectureRole.ASSISTANT;
 	}
 }
