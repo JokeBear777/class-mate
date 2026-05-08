@@ -19,6 +19,7 @@ public enum ErrorCode {
 	TEAM_RECRUIT_NOT_FOUND(HttpStatus.NOT_FOUND, "Team recruit post not found."),
 	TEAM_RECRUIT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to access this team recruit post."),
 	INVALID_TEAM_RECRUIT_MEMBER_COUNT(HttpStatus.BAD_REQUEST, "Current members cannot exceed required members."),
+	RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "Too many requests. Please try again later."),
 	EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "Email is already in use."),
 	INVALID_LOGIN_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Email or password is invalid."),
 	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found."),
