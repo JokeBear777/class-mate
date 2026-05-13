@@ -1,0 +1,10 @@
+package com.classmate.notification.domain;
+
+public enum NotificationType {
+	QUESTION_SPIKE,
+	CONFUSION_SPIKE,
+	FAST_PACE_SPIKE,
+	UNANSWERED_QUESTION_ACCUMULATION,
+	HIGH_CONFUSION_SCORE,
+	SYSTEM_NOTICE
+}
