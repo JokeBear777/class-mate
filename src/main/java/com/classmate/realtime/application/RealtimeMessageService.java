@@ -26,6 +26,10 @@ public class RealtimeMessageService {
 		send("/topic/sessions/" + sessionId + "/feedback", message);
 	}
 
+	public void sendAlertCreated(Long sessionId, Object message) {
+		send("/topic/sessions/" + sessionId + "/alerts", message);
+	}
+
 	private void send(String topic, Object message) {
 		try {
 			messagingTemplate.convertAndSend(topic, message);

@@ -5,6 +5,7 @@ import com.classmate.monitoring.domain.AlertType;
 import com.classmate.monitoring.domain.MonitoringAlert;
 import com.classmate.monitoring.domain.SessionMetric;
 import com.classmate.monitoring.infra.MonitoringAlertRepository;
+import com.classmate.notification.application.NotificationCommandService;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 
@@ -18,9 +19,14 @@ public class AnomalyDetectionService {
 	private static final double HIGH_CONFUSION_SCORE_THRESHOLD = 10.0;
 
 	private final MonitoringAlertRepository monitoringAlertRepository;
+	private final NotificationCommandService notificationCommandService;
 
-	public AnomalyDetectionService(MonitoringAlertRepository monitoringAlertRepository) {
+	public AnomalyDetectionService(
+			MonitoringAlertRepository monitoringAlertRepository,
+			NotificationCommandService notificationCommandService
+	) {
 		this.monitoringAlertRepository = monitoringAlertRepository;
+		this.notificationCommandService = notificationCommandService;
 	}
 
 	public void detectAndSaveAlerts(SessionMetric metric) {
@@ -66,7 +72,7 @@ public class AnomalyDetectionService {
 			return;
 		}
 
-		monitoringAlertRepository.save(MonitoringAlert.create(
+		MonitoringAlert alert = monitoringAlertRepository.save(MonitoringAlert.create(
 				metric.getSessionId(),
 				metric.getLectureId(),
 				alertType,
@@ -75,7 +81,7 @@ public class AnomalyDetectionService {
 				detectedValue,
 				thresholdValue
 		));
-		// TODO: Notify professor after Notification module is implemented.
+		notificationCommandService.notifyMonitoringAlert(alert);
 		// TODO: Request LLM summary after LLM monitoring module is implemented.
 	}
 }
