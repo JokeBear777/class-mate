@@ -2,6 +2,7 @@ package com.classmate.realtime.application;
 
 import com.classmate.realtime.dto.RealtimeFeedbackMessage;
 import com.classmate.realtime.dto.RealtimeQuestionMessage;
+import com.classmate.realtime.dto.RealtimeChatMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -28,6 +29,10 @@ public class RealtimeMessageService {
 
 	public void sendAlertCreated(Long sessionId, Object message) {
 		send("/topic/sessions/" + sessionId + "/alerts", message);
+	}
+
+	public void sendChatMessage(Long sessionId, RealtimeChatMessage message) {
+		send("/topic/sessions/" + sessionId + "/chat", message);
 	}
 
 	private void send(String topic, Object message) {
