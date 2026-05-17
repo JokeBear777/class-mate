@@ -1,0 +1,82 @@
+name: Build and Deploy ClassMate
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-and-push-backend:
+    name: Build and push backend image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout backend repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/class-mate-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/class-mate-backend:${{ github.sha }}
+
+  build-and-push-frontend:
+    name: Build and push frontend image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout frontend repository
+        uses: actions/checkout@v4
+        with:
+          repository: JokeBear777/class-mate-frontend
+          path: class-mate-frontend
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./class-mate-frontend
+          file: ./class-mate-frontend/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=/api
+            VITE_WS_URL=/ws
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/class-mate-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/class-mate-frontend:${{ github.sha }}
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-push-backend
+      - build-and-push-frontend
+
+    steps:
+      - name: Deploy by SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/class-mate
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
