@@ -55,7 +55,7 @@ jobs:
           file: ./class-mate-frontend/Dockerfile
           push: true
           build-args: |
-            VITE_API_BASE_URL=/api
+            VITE_API_BASE_URL=
             VITE_WS_URL=/ws
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/class-mate-frontend:latest
