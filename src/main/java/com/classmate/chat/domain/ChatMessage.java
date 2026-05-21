@@ -5,12 +5,22 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "chat_messages")
+@Table(
+		name = "chat_messages",
+		indexes = {
+				@Index(name = "idx_chat_messages_session_room_seq", columnList = "session_id, room_seq")
+		},
+		uniqueConstraints = {
+				@UniqueConstraint(name = "uk_chat_messages_session_room_seq", columnNames = {"session_id", "room_seq"})
+		}
+)
 public class ChatMessage {
 
 	@Id
@@ -29,6 +39,9 @@ public class ChatMessage {
 	@Column(name = "sender_name", nullable = false, length = 50)
 	private String senderName;
 
+	@Column(name = "room_seq", nullable = false)
+	private Long roomSeq;
+
 	@Column(nullable = false, length = 500)
 	private String content;
 
@@ -38,11 +51,12 @@ public class ChatMessage {
 	protected ChatMessage() {
 	}
 
-	private ChatMessage(Long sessionId, Long lectureId, Long senderId, String senderName, String content) {
+	private ChatMessage(Long sessionId, Long lectureId, Long senderId, String senderName, Long roomSeq, String content) {
 		this.sessionId = sessionId;
 		this.lectureId = lectureId;
 		this.senderId = senderId;
 		this.senderName = senderName;
+		this.roomSeq = roomSeq;
 		this.content = content;
 	}
 
@@ -51,9 +65,10 @@ public class ChatMessage {
 			Long lectureId,
 			Long senderId,
 			String senderName,
+			Long roomSeq,
 			String content
 	) {
-		return new ChatMessage(sessionId, lectureId, senderId, senderName, content);
+		return new ChatMessage(sessionId, lectureId, senderId, senderName, roomSeq, content);
 	}
 
 	@PrePersist
@@ -79,6 +94,10 @@ public class ChatMessage {
 
 	public String getSenderName() {
 		return senderName;
+	}
+
+	public Long getRoomSeq() {
+		return roomSeq;
 	}
 
 	public String getContent() {
