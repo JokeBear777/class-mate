@@ -10,6 +10,9 @@ public record ChatMessageResponse(
 		@Schema(description = "Chat message ID", example = "1")
 		Long chatMessageId,
 
+		@Schema(description = "Session-scoped monotonic ordering key. Gaps are allowed.", example = "104")
+		Long roomSeq,
+
 		@Schema(description = "Session ID", example = "1")
 		Long sessionId,
 
@@ -29,6 +32,7 @@ public record ChatMessageResponse(
 	public static ChatMessageResponse from(ChatMessage chatMessage) {
 		return new ChatMessageResponse(
 				chatMessage.getId(),
+				chatMessage.getRoomSeq(),
 				chatMessage.getSessionId(),
 				chatMessage.getLectureId(),
 				chatMessage.getSenderName(),

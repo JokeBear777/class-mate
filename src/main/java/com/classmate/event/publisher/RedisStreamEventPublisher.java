@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Component
 public class RedisStreamEventPublisher {
@@ -58,6 +60,19 @@ public class RedisStreamEventPublisher {
 	}
 
 	private void publish(ClassMateEventPayload payload) {
+		if (TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					publishNow(payload);
+				}
+			});
+			return;
+		}
+		publishNow(payload);
+	}
+
+	private void publishNow(ClassMateEventPayload payload) {
 		try {
 			redisTemplate.opsForStream().add(RedisStreamNames.LECTURE_EVENTS_STREAM, payload.toRecord());
 		} catch (RuntimeException exception) {
