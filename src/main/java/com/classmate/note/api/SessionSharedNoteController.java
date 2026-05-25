@@ -21,6 +21,8 @@ import java.util.List;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -42,6 +44,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 public class SessionSharedNoteController {
+
+	private static final Logger log = LoggerFactory.getLogger(SessionSharedNoteController.class);
 
 	private final SessionSharedNoteService sessionSharedNoteService;
 
@@ -187,6 +191,15 @@ public class SessionSharedNoteController {
 			@Payload RealtimeSessionNoteMessage message,
 			Principal principal
 	) {
+		log.info(
+				"Shared note draftChanged entered. sessionId={} principalNull={} principalClass={} blockId={} clientId={} draftSeq={}",
+				sessionId,
+				principal == null,
+				principal == null ? null : principal.getClass().getName(),
+				message == null ? null : message.blockId(),
+				message == null ? null : message.clientId(),
+				message == null ? null : message.draftSeq()
+		);
 		if (!(principal instanceof StompPrincipal stompPrincipal)) {
 			throw new BusinessException(ErrorCode.UNAUTHENTICATED);
 		}

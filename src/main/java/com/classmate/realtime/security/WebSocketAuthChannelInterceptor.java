@@ -2,18 +2,23 @@ package com.classmate.realtime.security;
 
 import com.classmate.common.exception.BusinessException;
 import com.classmate.common.security.JwtTokenProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
 public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
+	private static final Logger log = LoggerFactory.getLogger(WebSocketAuthChannelInterceptor.class);
 	private static final String AUTHORIZATION_HEADER = "Authorization";
 	private static final String BEARER_PREFIX = "Bearer ";
 
@@ -25,9 +30,22 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
-		StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+		StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+		if (accessor == null) {
+			accessor = StompHeaderAccessor.wrap(message);
+		}
+		log.info(
+				"WebSocket inbound STOMP message. command={} sessionId={} destination={} authorizationHeaderPresent={} userNull={} userClass={}",
+				accessor.getCommand(),
+				accessor.getSessionId(),
+				accessor.getDestination(),
+				StringUtils.hasText(accessor.getFirstNativeHeader(AUTHORIZATION_HEADER)),
+				accessor.getUser() == null,
+				accessor.getUser() == null ? null : accessor.getUser().getClass().getName()
+		);
 		if (accessor.getCommand() == StompCommand.CONNECT) {
 			authenticate(accessor);
+			return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
 		}
 		return message;
 	}
@@ -38,11 +56,21 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
 		try {
 			jwtTokenProvider.validateToken(token);
-			accessor.setUser(new StompPrincipal(
+			StompPrincipal principal = new StompPrincipal(
 					jwtTokenProvider.getUserId(token),
 					jwtTokenProvider.getEmail(token),
 					jwtTokenProvider.getRole(token)
-			));
+			);
+			accessor.setUser(principal);
+			log.info(
+					"WebSocket STOMP CONNECT authenticated. sessionId={} userId={} email={} role={} userNull={} userClass={}",
+					accessor.getSessionId(),
+					principal.getUserId(),
+					principal.getEmail(),
+					principal.getRole(),
+					accessor.getUser() == null,
+					accessor.getUser() == null ? null : accessor.getUser().getClass().getName()
+			);
 		} catch (BusinessException exception) {
 			throw new MessagingException("WebSocket authentication failed.");
 		}

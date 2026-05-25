@@ -83,7 +83,7 @@ public class SessionSharedNoteService {
 				session.getLectureId(),
 				blockOrder,
 				request.blockType(),
-				request.content().trim(),
+				normalizeContent(request.content()),
 				currentUserId
 		));
 		note.increaseRevision();
@@ -121,7 +121,7 @@ public class SessionSharedNoteService {
 			throwVersionConflict(block, request.version());
 		}
 
-		String newContent = request.content().trim();
+		String newContent = normalizeContent(request.content());
 		if (block.getContent().equals(newContent)) {
 			return SessionNoteBlockResponse.from(block, userName(block.getUpdatedBy()));
 		}
@@ -307,6 +307,10 @@ public class SessionSharedNoteService {
 
 	private String userName(Long userId) {
 		return userQueryService.getUserName(userId);
+	}
+
+	private String normalizeContent(String content) {
+		return content == null ? "" : content.trim();
 	}
 
 	private Long currentUserId() {

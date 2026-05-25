@@ -2,7 +2,6 @@ package com.classmate.note.dto.request;
 
 import com.classmate.note.domain.SessionNoteBlockType;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -13,7 +12,6 @@ public record CreateSessionNoteBlockRequest(
 		SessionNoteBlockType blockType,
 
 		@Schema(description = "Block content", example = "오늘 수업 핵심 개념 정리")
-		@NotBlank
 		@Size(max = 5000)
 		String content,
 
