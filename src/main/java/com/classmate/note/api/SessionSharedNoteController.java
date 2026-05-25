@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(
@@ -110,16 +111,21 @@ public class SessionSharedNoteController {
 
 	@Operation(
 			summary = "Delete shared note block",
-			description = "Deletes a block. Only the creator or lecture professor/assistant can delete it."
+			description = """
+					Deletes a block. Only the creator or lecture professor/assistant can delete it.
+					Optional version query parameter enables conditional delete conflict detection.
+					"""
 	)
 	@DeleteMapping("/sessions/{sessionId}/shared-note/blocks/{blockId}")
 	public ApiResponse<Void> deleteBlock(
 			@Parameter(description = "Session ID", example = "1")
 			@PathVariable Long sessionId,
 			@Parameter(description = "Block ID", example = "1")
-			@PathVariable Long blockId
+			@PathVariable Long blockId,
+			@Parameter(description = "Client-known current block version. Optional for backward compatibility.", example = "2")
+			@RequestParam(required = false) Long version
 	) {
-		sessionSharedNoteService.deleteBlock(sessionId, blockId);
+		sessionSharedNoteService.deleteBlock(sessionId, blockId, version);
 		return ApiResponse.success("Session note block deleted.", null);
 	}
 
@@ -139,7 +145,10 @@ public class SessionSharedNoteController {
 
 	@Operation(
 			summary = "Start editing shared note block",
-			description = "Stores Redis editing presence with 15s TTL and emits DOCUMENT_BLOCK_EDITING_STARTED."
+			description = """
+					Stores Redis editing presence with 15s TTL and emits DOCUMENT_BLOCK_EDITING_STARTED.
+					This is a UX soft lock and does not block REST save requests.
+					"""
 	)
 	@PostMapping("/sessions/{sessionId}/shared-note/blocks/{blockId}/editing/start")
 	public ApiResponse<Void> startEditing(
@@ -155,7 +164,10 @@ public class SessionSharedNoteController {
 
 	@Operation(
 			summary = "Heartbeat shared note block editing",
-			description = "Extends Redis editing presence TTL and emits DOCUMENT_BLOCK_EDITING_HEARTBEAT."
+			description = """
+					Extends Redis editing presence TTL and emits DOCUMENT_BLOCK_EDITING_HEARTBEAT.
+					This is a UX soft lock and does not block REST save requests.
+					"""
 	)
 	@PostMapping("/sessions/{sessionId}/shared-note/blocks/{blockId}/editing/heartbeat")
 	public ApiResponse<Void> heartbeat(
@@ -171,7 +183,10 @@ public class SessionSharedNoteController {
 
 	@Operation(
 			summary = "Stop editing shared note block",
-			description = "Deletes Redis editing presence and emits DOCUMENT_BLOCK_EDITING_STOPPED."
+			description = """
+					Deletes Redis editing presence and emits DOCUMENT_BLOCK_EDITING_STOPPED.
+					This is a UX soft lock and does not block REST save requests.
+					"""
 	)
 	@PostMapping("/sessions/{sessionId}/shared-note/blocks/{blockId}/editing/stop")
 	public ApiResponse<Void> stopEditing(

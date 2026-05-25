@@ -22,9 +22,12 @@ import com.classmate.note.infra.SessionNoteBlockHistoryRepository;
 import com.classmate.note.infra.SessionNoteBlockRepository;
 import com.classmate.note.infra.SessionSharedNoteRepository;
 import com.classmate.realtime.application.RealtimeMessageService;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Transactional(readOnly = true)
@@ -86,18 +89,16 @@ public class SessionSharedNoteService {
 				normalizeContent(request.content()),
 				currentUserId
 		));
-		note.increaseRevision();
+		SessionSharedNote updatedNote = incrementDocumentRevisionAndReload(note.getId(), LocalDateTime.now());
 
-		realtimeMessageService.sendSessionNoteMessage(
-				session.getId(),
-				RealtimeSessionNoteMessage.fromBlock(
-						SessionNoteRealtimeEventType.DOCUMENT_BLOCK_CREATED,
-						block,
-						note.getDocumentRevision(),
-						null,
-						currentUserName
-				)
+		RealtimeSessionNoteMessage event = RealtimeSessionNoteMessage.fromBlock(
+				SessionNoteRealtimeEventType.DOCUMENT_BLOCK_CREATED,
+				block,
+				updatedNote.getDocumentRevision(),
+				null,
+				currentUserName
 		);
+		publishAfterCommit(() -> realtimeMessageService.sendSessionNoteMessage(session.getId(), event));
 		return SessionNoteBlockResponse.from(block, currentUserName);
 	}
 
@@ -115,43 +116,59 @@ public class SessionSharedNoteService {
 		String currentUserName = currentUserProvider.getCurrentUserName();
 		LectureSession session = getSessionAndValidateParticipant(sessionId, currentUserId);
 		SessionSharedNote note = getNoteOrThrow(session.getId());
-		SessionNoteBlock block = getBlockOrThrow(note.getId(), blockId);
+		SessionNoteBlock beforeBlock = getBlockOrThrow(note.getId(), blockId);
 
-		if (block.getVersion() != request.version()) {
-			throwVersionConflict(block, request.version());
+		if (beforeBlock.getVersion() != request.version()) {
+			throwVersionConflict(beforeBlock, request.version());
 		}
 
 		String newContent = normalizeContent(request.content());
-		if (block.getContent().equals(newContent)) {
-			return SessionNoteBlockResponse.from(block, userName(block.getUpdatedBy()));
+		if (beforeBlock.getContent().equals(newContent)) {
+			return SessionNoteBlockResponse.from(beforeBlock, userName(beforeBlock.getUpdatedBy()));
 		}
 
-		String previousContent = block.getContent();
-		long previousVersion = block.getVersion();
-		block.update(newContent, request.version(), currentUserId);
-		note.increaseRevision();
+		String previousContent = beforeBlock.getContent();
+		long previousVersion = beforeBlock.getVersion();
+		LocalDateTime updatedAt = LocalDateTime.now();
+		int updated = sessionNoteBlockRepository.updateContentIfVersionMatches(
+				note.getId(),
+				blockId,
+				request.version(),
+				newContent,
+				currentUserId,
+				updatedAt
+		);
+		if (updated == 0) {
+			throwLatestBlockConflict(note.getId(), blockId, request.version());
+		}
+
+		SessionSharedNote updatedNote = incrementDocumentRevisionAndReload(note.getId(), updatedAt);
+		SessionNoteBlock updatedBlock = getBlockOrThrow(note.getId(), blockId);
 		sessionNoteBlockHistoryRepository.save(SessionNoteBlockHistory.recordUpdate(
-				block,
+				updatedBlock,
 				previousContent,
 				previousVersion,
 				currentUserId
 		));
 
-		realtimeMessageService.sendSessionNoteMessage(
-				session.getId(),
-				RealtimeSessionNoteMessage.fromBlock(
-						SessionNoteRealtimeEventType.DOCUMENT_BLOCK_SAVED,
-						block,
-						note.getDocumentRevision(),
-						request.clientId(),
-						currentUserName
-				)
+		RealtimeSessionNoteMessage event = RealtimeSessionNoteMessage.fromBlock(
+				SessionNoteRealtimeEventType.DOCUMENT_BLOCK_SAVED,
+				updatedBlock,
+				updatedNote.getDocumentRevision(),
+				request.clientId(),
+				currentUserName
 		);
-		return SessionNoteBlockResponse.from(block, currentUserName);
+		publishAfterCommit(() -> realtimeMessageService.sendSessionNoteMessage(session.getId(), event));
+		return SessionNoteBlockResponse.from(updatedBlock, currentUserName);
 	}
 
 	@Transactional
 	public void deleteBlock(Long sessionId, Long blockId) {
+		deleteBlock(sessionId, blockId, null);
+	}
+
+	@Transactional
+	public void deleteBlock(Long sessionId, Long blockId, Long requestVersion) {
 		Long currentUserId = currentUserId();
 		String currentUserName = currentUserProvider.getCurrentUserName();
 		LectureSession session = getSessionAndValidateParticipant(sessionId, currentUserId);
@@ -163,19 +180,29 @@ public class SessionSharedNoteService {
 			throw new BusinessException(ErrorCode.SESSION_NOTE_BLOCK_ACCESS_DENIED);
 		}
 
-		block.delete(currentUserId);
-		note.increaseRevision();
-
-		realtimeMessageService.sendSessionNoteMessage(
-				session.getId(),
-				RealtimeSessionNoteMessage.fromBlock(
-						SessionNoteRealtimeEventType.DOCUMENT_BLOCK_DELETED,
-						block,
-						note.getDocumentRevision(),
-						null,
-						currentUserName
-				)
+		long deleteVersion = requestVersion == null ? block.getVersion() : requestVersion;
+		LocalDateTime deletedAt = LocalDateTime.now();
+		int deleted = sessionNoteBlockRepository.softDeleteIfVersionMatches(
+				note.getId(),
+				blockId,
+				deleteVersion,
+				currentUserId,
+				deletedAt
 		);
+		if (deleted == 0) {
+			throwLatestBlockConflict(note.getId(), blockId, deleteVersion);
+		}
+
+		SessionSharedNote updatedNote = incrementDocumentRevisionAndReload(note.getId(), deletedAt);
+		SessionNoteBlock deletedBlock = getBlockIncludingDeletedOrThrow(note.getId(), blockId);
+		RealtimeSessionNoteMessage event = RealtimeSessionNoteMessage.fromBlock(
+				SessionNoteRealtimeEventType.DOCUMENT_BLOCK_DELETED,
+				deletedBlock,
+				updatedNote.getDocumentRevision(),
+				null,
+				currentUserName
+		);
+		publishAfterCommit(() -> realtimeMessageService.sendSessionNoteMessage(session.getId(), event));
 	}
 
 	public List<SessionNoteBlockHistoryResponse> getBlockHistories(Long sessionId, Long blockId) {
@@ -248,8 +275,18 @@ public class SessionSharedNoteService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.SESSION_SHARED_NOTE_NOT_FOUND));
 	}
 
+	private SessionSharedNote getNoteByIdOrThrow(Long noteId) {
+		return sessionSharedNoteRepository.findById(noteId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.SESSION_SHARED_NOTE_NOT_FOUND));
+	}
+
 	private SessionNoteBlock getBlockOrThrow(Long noteId, Long blockId) {
 		return sessionNoteBlockRepository.findByIdAndNoteIdAndDeletedFalse(blockId, noteId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOTE_BLOCK_NOT_FOUND));
+	}
+
+	private SessionNoteBlock getBlockIncludingDeletedOrThrow(Long noteId, Long blockId) {
+		return sessionNoteBlockRepository.findByIdAndNoteId(blockId, noteId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOTE_BLOCK_NOT_FOUND));
 	}
 
@@ -277,6 +314,7 @@ public class SessionSharedNoteService {
 	}
 
 	private SessionSharedNoteResponse toSharedNoteResponse(SessionSharedNote note) {
+		// TODO: Include Redis editing presence in snapshot response after extending the response contract.
 		List<SessionNoteBlockResponse> blocks = sessionNoteBlockRepository
 				.findByNoteIdAndDeletedFalseOrderByBlockOrderAsc(note.getId())
 				.stream()
@@ -303,6 +341,32 @@ public class SessionSharedNoteService {
 				ErrorCode.SESSION_NOTE_BLOCK_VERSION_CONFLICT.getMessage(),
 				conflictResponse
 		);
+	}
+
+	private void throwLatestBlockConflict(Long noteId, Long blockId, long requestVersion) {
+		SessionNoteBlock currentBlock = getBlockIncludingDeletedOrThrow(noteId, blockId);
+		if (currentBlock.isDeleted()) {
+			throw new BusinessException(ErrorCode.SESSION_NOTE_BLOCK_ALREADY_DELETED);
+		}
+		throwVersionConflict(currentBlock, requestVersion);
+	}
+
+	private SessionSharedNote incrementDocumentRevisionAndReload(Long noteId, LocalDateTime updatedAt) {
+		sessionSharedNoteRepository.incrementDocumentRevision(noteId, updatedAt);
+		return getNoteByIdOrThrow(noteId);
+	}
+
+	private void publishAfterCommit(Runnable publisher) {
+		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+			publisher.run();
+			return;
+		}
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				publisher.run();
+			}
+		});
 	}
 
 	private String userName(Long userId) {
