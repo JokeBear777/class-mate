@@ -4,10 +4,12 @@ import com.classmate.note.domain.SessionNoteBlock;
 import com.classmate.note.dto.message.RealtimeSessionNoteMessage;
 import com.classmate.note.dto.message.SessionNoteRealtimeEventType;
 import com.classmate.note.dto.request.SessionNoteEditingPresenceRequest;
+import com.classmate.note.dto.response.SessionNoteEditingPresenceResponse;
 import com.classmate.realtime.application.RealtimeMessageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -73,6 +75,28 @@ public class SessionNotePresenceService {
 						userName
 				)
 		);
+	}
+
+	public SessionNoteEditingPresenceResponse getPresence(SessionNoteBlock block) {
+		String key = key(block.getSessionId(), block.getId());
+		String rawValue = redisTemplate.opsForValue().get(key);
+		if (rawValue == null) {
+			return SessionNoteEditingPresenceResponse.inactive();
+		}
+
+		Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+		if (ttl == null || ttl <= 0) {
+			return SessionNoteEditingPresenceResponse.inactive();
+		}
+
+		try {
+			EditingPresenceValue value = objectMapper.readValue(rawValue, EditingPresenceValue.class);
+			return SessionNoteEditingPresenceResponse.active(value.userName(), value.clientId(), ttl);
+		} catch (JsonProcessingException exception) {
+			log.warn("Failed to deserialize session note editing presence. sessionId={}, blockId={}",
+					block.getSessionId(), block.getId(), exception);
+			return SessionNoteEditingPresenceResponse.inactive();
+		}
 	}
 
 	private void savePresence(

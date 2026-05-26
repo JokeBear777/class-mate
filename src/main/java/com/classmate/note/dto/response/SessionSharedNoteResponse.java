@@ -21,7 +21,7 @@ public record SessionSharedNoteResponse(
 		@Schema(description = "Document revision increased after block create/update/delete", example = "3")
 		long documentRevision,
 
-		@Schema(description = "Non-deleted blocks ordered by blockOrder")
+		@Schema(description = "Non-deleted blocks ordered by blockOrder, including current Redis editing presence snapshot")
 		List<SessionNoteBlockResponse> blocks
 ) {
 

@@ -21,23 +21,34 @@ public record SessionNoteBlockResponse(
 		@Schema(description = "Block order", example = "1000")
 		int blockOrder,
 
-		@Schema(description = "Block type", example = "PARAGRAPH")
+		@Schema(description = "Internal block type metadata for frontend rendering; not a user-facing label", example = "PARAGRAPH")
 		String blockType,
 
 		@Schema(description = "Block content")
 		String content,
 
-		@Schema(description = "Block optimistic lock version", example = "2")
+		@Schema(description = "Internal optimistic lock version used for update/delete conflict detection; not a user-facing label", example = "2")
 		long version,
 
-		@Schema(description = "Last editor name", example = "김민우")
+		@Schema(description = "Last editor name", example = "Kim Minwoo")
 		String updatedByName,
 
 		@Schema(description = "Last updated time")
-		LocalDateTime updatedAt
+		LocalDateTime updatedAt,
+
+		@Schema(description = "Current Redis editing presence snapshot for this block")
+		SessionNoteEditingPresenceResponse editingPresence
 ) {
 
 	public static SessionNoteBlockResponse from(SessionNoteBlock block, String updatedByName) {
+		return from(block, updatedByName, SessionNoteEditingPresenceResponse.inactive());
+	}
+
+	public static SessionNoteBlockResponse from(
+			SessionNoteBlock block,
+			String updatedByName,
+			SessionNoteEditingPresenceResponse editingPresence
+	) {
 		return new SessionNoteBlockResponse(
 				block.getId(),
 				block.getNoteId(),
@@ -48,7 +59,8 @@ public record SessionNoteBlockResponse(
 				block.getContent(),
 				block.getVersion(),
 				updatedByName,
-				block.getUpdatedAt()
+				block.getUpdatedAt(),
+				editingPresence
 		);
 	}
 }

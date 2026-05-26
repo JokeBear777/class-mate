@@ -314,13 +314,20 @@ public class SessionSharedNoteService {
 	}
 
 	private SessionSharedNoteResponse toSharedNoteResponse(SessionSharedNote note) {
-		// TODO: Include Redis editing presence in snapshot response after extending the response contract.
 		List<SessionNoteBlockResponse> blocks = sessionNoteBlockRepository
 				.findByNoteIdAndDeletedFalseOrderByBlockOrderAsc(note.getId())
 				.stream()
-				.map(this::toBlockResponse)
+				.map(this::toSnapshotBlockResponse)
 				.toList();
 		return SessionSharedNoteResponse.from(note, blocks);
+	}
+
+	private SessionNoteBlockResponse toSnapshotBlockResponse(SessionNoteBlock block) {
+		return SessionNoteBlockResponse.from(
+				block,
+				userName(block.getUpdatedBy()),
+				sessionNotePresenceService.getPresence(block)
+		);
 	}
 
 	private SessionNoteBlockResponse toBlockResponse(SessionNoteBlock block) {

@@ -37,6 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
 		name = "Session Shared Note",
 		description = """
 				Session-scoped shared note APIs. GET /shared-note returns the DB snapshot.
+				Snapshot blocks are ordered by blockOrder and include Redis editing presence when available.
+				blockType and version are internal rendering/concurrency metadata, not user-facing labels.
 				Block update requests must include the current block version; mismatches return 409 Conflict.
 				DRAFT_CHANGED is a realtime UX event, not a DB save. BLOCK_SAVED is emitted only after DB save succeeds.
 				Block histories record committed changes only.
@@ -56,7 +58,11 @@ public class SessionSharedNoteController {
 
 	@Operation(
 			summary = "Get session shared note snapshot",
-			description = "Returns or creates a session-scoped shared note snapshot for lecture participants."
+			description = """
+					Returns or creates a session-scoped shared note snapshot for lecture participants.
+					Blocks are ordered by blockOrder and include current Redis editing presence per block.
+					blockType and version are internal metadata for rendering and concurrency control.
+					"""
 	)
 	@GetMapping("/sessions/{sessionId}/shared-note")
 	public ApiResponse<SessionSharedNoteResponse> getSharedNote(
