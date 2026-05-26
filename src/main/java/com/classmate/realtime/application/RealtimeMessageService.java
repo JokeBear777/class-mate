@@ -1,5 +1,6 @@
 package com.classmate.realtime.application;
 
+import com.classmate.note.dto.message.RealtimeSessionNoteMessage;
 import com.classmate.realtime.dto.RealtimeFeedbackMessage;
 import com.classmate.realtime.dto.RealtimeQuestionMessage;
 import com.classmate.realtime.dto.RealtimeChatMessage;
@@ -33,6 +34,10 @@ public class RealtimeMessageService {
 
 	public void sendChatMessage(Long sessionId, RealtimeChatMessage message) {
 		send("/topic/sessions/" + sessionId + "/chat", message);
+	}
+
+	public void sendSessionNoteMessage(Long sessionId, RealtimeSessionNoteMessage message) {
+		send("/topic/sessions/" + sessionId + "/shared-note", message);
 	}
 
 	private void send(String topic, Object message) {

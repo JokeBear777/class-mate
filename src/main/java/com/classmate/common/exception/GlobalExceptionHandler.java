@@ -11,8 +11,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler(BusinessException.class)
-	public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
+	public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException exception) {
 		ErrorCode errorCode = exception.getErrorCode();
+		if (exception.getData() != null) {
+			return ResponseEntity
+					.status(errorCode.getHttpStatus())
+					.body(new ApiResponse<>(false, exception.getMessage(), exception.getData()));
+		}
 		return ResponseEntity
 				.status(errorCode.getHttpStatus())
 				.body(ApiResponse.fail(exception.getMessage()));
